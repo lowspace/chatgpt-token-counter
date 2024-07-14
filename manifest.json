@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "ChatGPT Token Counter",
+  "version": "1.0",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://*.chatgpt.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["*://*.chatgpt.com/*", "file:///*/test.html"],
+      "js": ["dist/tokenizers.bundle.js", "dist/tokenizerGPT4.bundle.js", "dist/tokenizerGPT4O.bundle.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'"
+  }
+}

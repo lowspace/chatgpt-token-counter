@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>ChatGPT Token Counter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .row label {
+            width: 120px;
+            text-align: right;
+            padding-right: 10px;
+            font-weight: bold;
+        }
+        .row .value, .row select, .row .progress-container {
+            flex: 1;
+        }
+        .row select {
+            padding: 5px;
+            font-size: 1em;
+            text-align: center; /* Ensure text is centered */
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #e0e0e0; /* Lighter background for better contrast */
+            border-radius: 5px;
+            overflow: hidden;
+        }
+        #token-usage-bar {
+            width: 0%;
+            height: 30px;
+            text-align: center;
+            line-height: 30px;
+            color: black; /* Darker text color for better readability */
+            background-color: #4CAF50; /* Green */
+        }
+        #token_usage, #token_limit {
+            font-size: 1.2em;
+            padding-left: 10px;
+        }
+        .slider {
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>ChatGPT Token Counter</h1>
+
+    <div class="row">
+        <label>Default Model:</label>
+        <select id="default-model">
+            <option value="gpt3.5">GPT-3.5</option>
+            <option value="gpt4">GPT-4</option>
+            <option value="gpt4o">GPT-4o</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <label>Current Model:</label>
+        <select id="current-model">
+            <option value="gpt3.5">GPT-3.5</option>
+            <option value="gpt4">GPT-4</option>
+            <option value="gpt4o">GPT-4o</option>
+        </select>
+    </div>
+
+    <div class="row">
+        <label>Token Limit:</label>
+        <span id="token_limit" class="value"></span>
+    </div>
+
+    <div class="row">
+        <label>Token Usage:</label>
+        <span id="token_usage" class="value"></span>
+    </div>
+
+    <div class="row">
+        <label>Usage Progress:</label>
+        <div class="progress-container">
+            <div id="token-usage-bar">0%</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <label>Pin Window:</label>
+        <input type="checkbox" id="pin-switch" class="slider">
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>
