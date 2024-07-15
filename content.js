@@ -1,5 +1,5 @@
 // Global storage object
-const messageIdToTextMap = {};
+let usedMessageIds = {};
 let tokenUsage = 0; // Initialize token usage
 
 // Function to load the tokenizer based on the model slug stored in Chrome's local storage
@@ -39,40 +39,99 @@ function updateTokenUsage(additionalTokens) {
     chrome.storage.local.set({ tokenUsage: tokenUsage });
 }
 
-// Function to process each message text
-async function processText(messageId, innerText) {
-    // Load and initialize tokenizer
-    const tokenizer = await loadTokenizer();
+// 计数tokens
+async function tokenCounter(innerText) {
+    const tokenizer = await loadTokenizer(); // 假设loadTokenizer是异步的
     const tokens = tokenizer.encode(innerText);
-    const tokensCnt = tokens.length;
+    return tokens.length;
+}
 
-    // Update the total token usage
-    updateTokenUsage(tokensCnt);
-
-    chrome.storage.local.get(messageId, function(result) {
-        if(result[messageId] && result[messageId][currentModelSlug]) {
-            console.log(`Data for ${messageId} using model already exists.`);
-        } else {
-            let data = result[messageId] || {};
-            data[currentModelSlug] = tokensCnt;
-            chrome.storage.local.set({ [messageId]: data });
-            console.log(`Token count for "${innerText}" is ${tokensCnt}. Data saved.`);
-        }
+// 检查messageId是否已存在
+function checkMessageId(messageId, modelSlug) {
+    return new Promise(resolve => {
+        chrome.storage.local.get(messageId, function(result) {
+            if (result[messageId] && result[messageId][modelSlug]) {
+                resolve(result[messageId][modelSlug]); // 返回已存在的token数量
+            } else {
+                resolve(null); // 不存在，需要处理文本
+            }
+        });
     });
 }
 
+// 写入messageId数据
+function writeMessageId(messageId, modelSlug, tokenCount) {
+    let data = { [modelSlug]: tokenCount };
+    chrome.storage.local.set({ [messageId]: data }, function() {
+        console.log(`Data for ${messageId} and model ${modelSlug} saved with token count: ${tokenCount}`);
+    });
+}
+
+// 引入并初始化 Turndown 服务
+const turndownService = new TurndownService();
+
+// 动态监测文本变化并防抖处理，并返回转换为 Markdown 的文本
+function getInnerText(element, delay = 1000) {
+    let lastHtmlContent = element.innerHTML; // 初始时记录元素的 HTML 内容
+    let debounceTimer;
+
+    return new Promise(resolve => {
+        const observer = new MutationObserver(mutations => {
+            mutations.forEach(mutation => {
+                if (mutation.type === 'characterData' || mutation.type === 'childList') {
+                    clearTimeout(debounceTimer);
+                    debounceTimer = setTimeout(() => {
+                        if (element.innerHTML !== lastHtmlContent) {
+                            lastHtmlContent = element.innerHTML; // 更新最后的 HTML 内容
+                            let markdownText = turndownService.turndown(lastHtmlContent); // 将 HTML 转换为 Markdown
+                            resolve(markdownText); // 返回转换后的 Markdown 文本
+                        }
+                    }, delay);
+                }
+            });
+        });
+
+        observer.observe(element, {
+            characterData: true,
+            childList: true,
+            subtree: true
+        });
+    });
+}
+
+
 // Function to extract and update messages
 function extractAndUpdateMessages() {
-    const elementsWithMessageId = document.querySelectorAll('[data-message-id]');
-    elementsWithMessageId.forEach(element => {
-        const messageId = element.getAttribute('data-message-id');
-        const innerText = element.querySelector('div') ? element.querySelector('div').innerText : "No inner <div> found";
-        
-        // Process new messages
-        if (!messageIdToTextMap[messageId]) {
-            messageIdToTextMap[messageId] = innerText;
-            processText(messageId, innerText);
+    chrome.storage.local.get('currentModel', async function(data) {
+        const currentModelSlug = data.currentModel;
+        if (!currentModelSlug) {
+            console.error('No currentModelSlug found in storage.');
+            return; // 如果没有找到currentModelSlug，停止执行
         }
+
+        const elementsWithMessageId = document.querySelectorAll('[data-message-id]');
+        elementsWithMessageId.forEach(async element => {
+            const messageId = element.getAttribute('data-message-id');
+
+            // 检查是否已处理该messageId
+            if (!usedMessageIds[messageId]) {
+                usedMessageIds[messageId] = true; // 标记为已处理
+
+                // 检查消息ID
+                const existingData = await checkMessageId(messageId, currentModelSlug);
+                let tokensCnt; // 定义一个变量来存储令牌数
+                if (existingData) {
+                    console.log(`Data already exists for message ID: ${messageId} and model: ${currentModelSlug}`);
+                    tokensCnt = existingData; // 如果数据已存在，使用现有的令牌数
+                } else {
+                    const innerText = await getInnerText(element.querySelector('div') ? element.querySelector('div') : "No inner <div> found");
+                    tokensCnt = await tokenCounter(innerText); // 计算新的令牌数
+                    console.log(`TEST, current write text is: ${innerText}`)
+                    writeMessageId(messageId, currentModelSlug, tokensCnt); // 写入新计算的令牌数
+                }
+                updateTokenUsage(tokensCnt); // 更新令牌使用量，现在在if和else块之外
+            }
+        });
     });
 }
 
@@ -91,6 +150,7 @@ function checkAndUpdateConversationId() {
     if (newConversationId !== currentConversationId) {
         currentConversationId = newConversationId;
         tokenUsage = 0; // Reset token usage
+        usedMessageIds = {}; // Reset message id list
         chrome.storage.local.set({ tokenUsage: tokenUsage });
         extractAndUpdateMessages();  // Re-start message extraction and update process
         console.log("Conversation ID changed. Token usage reset and messages re-extracted.");

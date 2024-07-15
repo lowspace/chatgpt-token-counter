@@ -2,7 +2,8 @@
   "dependencies": {
     "@lenml/tokenizer-gpt4": "^1.0.10",
     "@lenml/tokenizer-gpt4o": "^1.0.10",
-    "@lenml/tokenizers": "^1.0.9"
+    "@lenml/tokenizers": "^1.0.9",
+    "turndown": "^7.2.0"
   },
   "name": "chatgpt-token-counter",
   "version": "1.0.0",

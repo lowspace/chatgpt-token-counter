@@ -13,7 +13,7 @@
   "content_scripts": [
     {
       "matches": ["*://*.chatgpt.com/*", "file:///*/test.html"],
-      "js": ["dist/tokenizers.bundle.js", "dist/tokenizerGPT4.bundle.js", "dist/tokenizerGPT4O.bundle.js", "content.js"],
+      "js": ["dist/tokenizers.bundle.js", "dist/tokenizerGPT4.bundle.js", "dist/tokenizerGPT4O.bundle.js", "dist/turndown.browser.umd.js", "content.js"],
       "run_at": "document_idle"
     }
   ],
